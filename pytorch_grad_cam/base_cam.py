@@ -1,4 +1,4 @@
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple, Sequence
 
 import numpy as np
 import torch
@@ -19,12 +19,15 @@ class BaseCAM:
         compute_input_gradient: bool = False,
         uses_gradients: bool = True,
         tta_transforms: Optional[tta.Compose] = None,
+        device: torch.device = torch.device("cuda"),
+        target_w_h_d = None,
     ) -> None:
         self.model = model.eval()
         self.target_layers = target_layers
-
+        self.device = device
+        self.target_w_h_d = target_w_h_d
         # Use the same device as the model.
-        self.device = next(self.model.parameters()).device
+        # self.device = next(self.model.parameters()).device
         self.reshape_transform = reshape_transform
         self.compute_input_gradient = compute_input_gradient
         self.uses_gradients = uses_gradients
@@ -82,7 +85,10 @@ class BaseCAM:
     def forward(
         self, input_tensor: torch.Tensor, targets: List[torch.nn.Module], eigen_smooth: bool = False
     ) -> np.ndarray:
-        input_tensor = input_tensor.to(self.device)
+        if isinstance(input_tensor, Sequence):
+            input_tensor = [item.to(self.device) for item in input_tensor]
+        else:
+            input_tensor = input_tensor.to(self.device)
 
         if self.compute_input_gradient:
             input_tensor = torch.autograd.Variable(input_tensor, requires_grad=True)
@@ -111,6 +117,8 @@ class BaseCAM:
         return self.aggregate_multi_layers(cam_per_layer)
 
     def get_target_width_height(self, input_tensor: torch.Tensor) -> Tuple[int, int]:
+        if self.target_w_h_d is not None:
+            return self.target_w_h_d
         if len(input_tensor.shape) == 4:
             width, height = input_tensor.size(-1), input_tensor.size(-2)
             return width, height
@@ -140,6 +148,9 @@ class BaseCAM:
 
             cam = self.get_cam_image(input_tensor, target_layer, targets, layer_activations, layer_grads, eigen_smooth)
             cam = np.maximum(cam, 0)
+            # TODO: check that it is correct step!!
+            if len(cam.shape) == 5:
+                cam = np.max(cam, axis=1)
             scaled = scale_cam_image(cam, target_size)
             cam_per_target_layer.append(scaled[:, None, :])
 

@@ -5,13 +5,14 @@ from pytorch_grad_cam.utils.svd_on_activations import get_2d_projection
 
 class GradCAMElementWise(BaseCAM):
     def __init__(self, model, target_layers, 
-                 reshape_transform=None):
+                 reshape_transform=None, **kwargs):
         super(
             GradCAMElementWise,
             self).__init__(
             model,
             target_layers,
-            reshape_transform)
+            reshape_transform,
+            **kwargs)
 
     def get_cam_image(self,
                       input_tensor,
