@@ -31,12 +31,14 @@ class AblationCAM(BaseCAM):
                  reshape_transform: Callable = None,
                  ablation_layer: torch.nn.Module = AblationLayer(),
                  batch_size: int = 32,
-                 ratio_channels_to_ablate: float = 1.0) -> None:
+                 ratio_channels_to_ablate: float = 1.0,
+                 **kwargs) -> None:
 
         super(AblationCAM, self).__init__(model,
                                           target_layers,
                                           reshape_transform,
-                                          uses_gradients=False)
+                                          uses_gradients=False, 
+                                          **kwargs)
         self.batch_size = batch_size
         self.ablation_layer = ablation_layer
         self.ratio_channels_to_ablate = ratio_channels_to_ablate
@@ -99,7 +101,8 @@ class AblationCAM(BaseCAM):
             for batch_index, (target, tensor) in enumerate(
                     zip(targets, input_tensor)):
                 new_scores = []
-                batch_tensor = tensor.repeat(self.batch_size, 1, 1, 1)
+                # batch_tensor = tensor.repeat(self.batch_size, 1, 1, 1)  # original, for 2D
+                batch_tensor = tensor.repeat(self.batch_size, 1, 1, 1, 1)
 
                 # Check which channels should be ablated. Normally this will be all channels,
                 # But we can also try to speed this up by using a low
@@ -123,8 +126,10 @@ class AblationCAM(BaseCAM):
                         input_batch_index = batch_index,
                         activations = self.activations,
                         num_channels_to_ablate = batch_tensor.size(0))
+                    # score = [target(o).cpu().item()
+                    #          for o in self.model(batch_tensor)]  # normal model that takes a tensor as an input.
                     score = [target(o).cpu().item()
-                             for o in self.model(batch_tensor)]
+                             for o in self.model([batch_tensor])]  # my model takes a list as an input
                     new_scores.extend(score)
                     ablation_layer.indices = ablation_layer.indices[batch_tensor.size(
                         0):]

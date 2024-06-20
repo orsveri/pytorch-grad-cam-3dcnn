@@ -159,12 +159,14 @@ def show_factorization_on_image(img: np.ndarray,
     return result
 
 
-def scale_cam_image(cam, target_size=None):
+def scale_cam_image(cam, target_size=None, normalize=True):
     result = []
     for img in cam:
-        img = img - np.min(img)
-        img = img / (1e-7 + np.max(img))
+        if normalize:
+            img = img - np.min(img)
+            img = img / (1e-7 + np.max(img))
         if target_size is not None:
+            # preserve the time dimension
             img = zoom(img, [(t_s/i_s) for i_s, t_s in zip(img.shape, target_size[::-1])])
         result.append(img)
     result = np.float32(result)

@@ -64,8 +64,10 @@ class AblationLayer(torch.nn.Module):
         """ This creates the next batch of activations from the layer.
             Just take corresponding batch member from activations, and repeat it num_channels_to_ablate times.
         """
+        # self.activations = activations[input_batch_index, :, :, :].clone(
+        # ).unsqueeze(0).repeat(num_channels_to_ablate, 1, 1, 1)  # 2D
         self.activations = activations[input_batch_index, :, :, :].clone(
-        ).unsqueeze(0).repeat(num_channels_to_ablate, 1, 1, 1)
+        ).unsqueeze(0).repeat(num_channels_to_ablate, 1, 1, 1, 1)
 
     def __call__(self, x):
         output = self.activations
@@ -140,8 +142,10 @@ class AblationLayerFasterRCNN(AblationLayer):
         for key, value in activations.items():
             fpn_activation = value[input_batch_index,
                                    :, :, :].clone().unsqueeze(0)
+            # self.activations[key] = fpn_activation.repeat(
+            #     num_channels_to_ablate, 1, 1, 1)  # 2D
             self.activations[key] = fpn_activation.repeat(
-                num_channels_to_ablate, 1, 1, 1)
+                num_channels_to_ablate, 1, 1, 1, 1)
 
     def __call__(self, x):
         result = self.activations

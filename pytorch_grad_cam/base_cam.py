@@ -21,9 +21,11 @@ class BaseCAM:
         tta_transforms: Optional[tta.Compose] = None,
         device: torch.device = torch.device("cuda"),
         target_w_h_d = None,
+        normalize=True,
     ) -> None:
         self.model = model.eval()
         self.target_layers = target_layers
+        self.normalize = normalize
         self.device = device
         self.target_w_h_d = target_w_h_d
         # Use the same device as the model.
@@ -151,7 +153,7 @@ class BaseCAM:
             # TODO: check that it is correct step!!
             if len(cam.shape) == 5:
                 cam = np.max(cam, axis=1)
-            scaled = scale_cam_image(cam, target_size)
+            scaled = scale_cam_image(cam, target_size, normalize=self.normalize)
             cam_per_target_layer.append(scaled[:, None, :])
 
         return cam_per_target_layer
@@ -160,7 +162,7 @@ class BaseCAM:
         cam_per_target_layer = np.concatenate(cam_per_target_layer, axis=1)
         cam_per_target_layer = np.maximum(cam_per_target_layer, 0)
         result = np.mean(cam_per_target_layer, axis=1)
-        return scale_cam_image(result)
+        return scale_cam_image(result, normalize=self.normalize)
 
     def forward_augmentation_smoothing(
         self, input_tensor: torch.Tensor, targets: List[torch.nn.Module], eigen_smooth: bool = False
